@@ -186,6 +186,7 @@ def all(server=None, bench_filter=""):
 		group.status = get_group_status(group.name)
 
 	return private_groups
+<<<<<<< HEAD
 
 
 @frappe.whitelist()
@@ -194,6 +195,8 @@ def bench_tags():
 	return frappe.get_all(
 		"Press Tag", {"team": team, "doctype_name": "Release Group"}, pluck="tag"
 	)
+=======
+>>>>>>> cb350b37 (fix:use app title to get saas app generator)
 
 
 def get_app_counts_for_groups(rg_names):

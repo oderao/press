@@ -116,6 +116,7 @@ def process_backup_site_job_update(job):
 				remote_private,
 			) = track_offsite_backups(job.site, backup_data, offsite_backup_data)
 
+<<<<<<< HEAD
 			site_backup_dict = {
 				"files_availability": "Available",
 				"database_size": backup_data["database"]["size"],
@@ -134,6 +135,24 @@ def process_backup_site_job_update(job):
 					}
 				)
 
+=======
+			frappe.db.set_value(
+				"Site Backup",
+				backup.name,
+				{
+					"files_availability": "Available",
+					"database_size": backup_data["database"]["size"],
+					"database_url": backup_data["database"]["url"],
+					"database_file": backup_data["database"]["file"],
+					"config_file_size": backup_data.get("site_config",{}).get("size",""),
+					"config_file_url": backup_data.get("site_config",{}).get("url",""),
+					"config_file": backup_data.get("site_config",{}).get("file",""),
+					"remote_database_file": remote_database,
+					"remote_config_file": remote_config_file,
+				},
+				for_update=False,
+			)
+>>>>>>> cb350b37 (fix:use app title to get saas app generator)
 			if "private" in backup_data and "public" in backup_data:
 				site_backup_dict.update(
 					{
