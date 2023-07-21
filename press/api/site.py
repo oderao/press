@@ -169,7 +169,7 @@ def _new(site, server: str = None):
 	)
 
 	if app_plans and len(app_plans) > 0:
-		subscription_docs = get_app_subscriptions(app_plans)
+		subscription_docs = get_app_subscriptions(app_plans, team.name)
 
 		# Set the secret keys for subscription in config
 		secret_keys = {f"sk_{s.app}": s.secret_key for s in subscription_docs}
@@ -226,7 +226,7 @@ def new(site):
 	return _new(site)
 
 
-def get_app_subscriptions(app_plans):
+def get_app_subscriptions(app_plans, team: str):
 	subscriptions = []
 
 	for app_name, plan_name in app_plans.items():
@@ -243,6 +243,7 @@ def get_app_subscriptions(app_plans):
 				"doctype": "Marketplace App Subscription",
 				"marketplace_app_plan": plan_name,
 				"app": app_name,
+				"team": team,
 				"while_site_creation": True,
 			}
 		).insert(ignore_permissions=True)
@@ -662,6 +663,7 @@ def all():
 
 	benches_with_updates = set(benches_with_available_update())
 	for site in sites:
+		site.tags = frappe.get_all("Resource Tag", {"parent": site.name}, pluck="tag_name")
 		if site.bench in benches_with_updates:
 			site.update_available = True
 
@@ -670,6 +672,9 @@ def all():
 
 	sites_data.site_list = sites
 	sites_data.recents = recents
+	sites_data.tags = frappe.get_all(
+		"Press Tag", {"team": team, "doctype_name": "Site"}, pluck="tag"
+	)
 
 	return sites_data
 
@@ -723,6 +728,10 @@ def get(name):
 		"hide_config": site.hide_config,
 		"notify_email": site.notify_email,
 		"ip": ip,
+		"site_tags": [{"name": x.tag, "tag": x.tag_name} for x in site.tags],
+		"tags": frappe.get_all(
+			"Press Tag", {"team": team, "doctype_name": "Site"}, ["name", "tag"]
+		),
 	}
 
 
@@ -1282,6 +1291,7 @@ def create_marketplace_app_subscription(site_name, app_name, plan_name):
 			"marketplace_app_plan": plan_name,
 			"app": app_name,
 			"site": site_name,
+			"team": get_current_team(),
 		}
 	).insert(ignore_permissions=True)
 
@@ -1577,8 +1587,8 @@ def change_team(team, name):
 	from press.press.doctype.team.team import get_child_team_members
 
 	current_team = get_current_team(True)
-	child_teams = [team.name for team in get_child_team_members(current_team.name)]
-	teams = [current_team.name] + child_teams
+	child_teams = [team.team_title for team in get_child_team_members(current_team.name)]
+	teams = [current_team.team_title] + child_teams
 
 	if team not in teams:
 		frappe.throw(f"{team} is not part of your organization.")

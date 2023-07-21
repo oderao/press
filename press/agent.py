@@ -256,6 +256,7 @@ class Agent:
 		skip_failing_patches=False,
 		skip_backups=False,
 		before_migrate_scripts=None,
+		skip_search_index=True,
 	):
 		activate = site.status_before_update in ("Active", "Broken")
 		data = {
@@ -264,6 +265,7 @@ class Agent:
 			"skip_failing_patches": skip_failing_patches,
 			"skip_backups": skip_backups,
 			"before_migrate_scripts": before_migrate_scripts,
+			"skip_search_index": skip_search_index,
 		}
 		return self.create_agent_job(
 			f"Update Site {deploy_type}",
@@ -346,7 +348,7 @@ class Agent:
 
 	def backup_site(self, site, with_files=False, offsite=False):
 		from press.press.doctype.site_backup.site_backup import get_backup_bucket
-
+		
 		data = {"with_files": with_files}
 
 		if offsite:
@@ -668,6 +670,7 @@ class Agent:
 		return status
 
 	def get_site_sid(self, site):
+		frappe.log_error("site", site)
 		return self.get(f"benches/{site.bench}/sites/{site.name}/sid")["sid"]
 
 	def get_site_info(self, site):

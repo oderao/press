@@ -73,7 +73,7 @@ website_redirects = [
 	},
 	{"source": "/dashboard/f-login", "target": get_frappe_io_auth_url() or "/"},
 	{"source": "/f-login", "target": "/dashboard/f-login"},
-	{"source": "/signup", "target": "/erpnext/signup"},
+	{"source": "/signup", "target": "/optibizpro/signup"},
 ]
 
 email_css = ["/assets/press/css/email.css"]
@@ -198,12 +198,14 @@ scheduler_events = {
 		"press.press.doctype.bench.bench.sync_benches",
 		"press.press.doctype.site.pool.create",
 		"press.press.doctype.invoice.invoice.finalize_draft_invoices",
-		"press.marketplace.doctype.marketplace_app_subscription.marketplace_app_subscription.create_usage_records",
 		"press.press.doctype.app.app.poll_new_releases",
 		"press.press.doctype.agent_job.agent_job.fail_old_jobs",
 		"press.press.doctype.site_update.site_update.mark_stuck_updates_as_fatal",
 		"press.marketplace.doctype.marketplace_consumption_record.marketplace_consumption_record.consume_credits_for_prepaid_records",
 		"press.press.doctype.deploy_candidate.deploy_candidate.cleanup_build_directories",
+		"press.press.doctype.deploy_candidate.deploy_candidate.delete_draft_candidates",
+		"press.press.doctype.virtual_disk_snapshot.virtual_disk_snapshot.delete_old_snapshots",
+		"press.press.doctype.app_release.app_release.cleanup_unused_releases",
 	],
 	"all": [
 		"press.auth.flush",

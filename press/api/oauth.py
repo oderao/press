@@ -17,9 +17,12 @@ from press.api.saas import (
 	create_or_rename_saas_site,
 )
 from press.press.doctype.site.saas_site import get_saas_domain
+from press.utils import log_error
 
 
 import os
+
+from press.utils.telemetry import capture, identify
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -33,9 +36,6 @@ def google_oauth_flow():
 			"https://www.googleapis.com/auth/userinfo.profile",
 			"openid",
 			"https://www.googleapis.com/auth/userinfo.email",
-			"https://www.googleapis.com/auth/user.addresses.read",
-			"https://www.googleapis.com/auth/user.phonenumbers.read",
-			"https://www.googleapis.com/auth/contacts.readonly",
 		],
 		redirect_uri=redirect_uri,
 	)
@@ -70,7 +70,9 @@ def callback(code=None, state=None):
 		flow = google_oauth_flow()
 		flow.fetch_token(authorization_response=frappe.request.url)
 	except Exception as e:
-		frappe.throw(e)
+		log_error("Google oauth Login failed", data=e)
+		frappe.local.response.type = "redirect"
+		frappe.local.response.location = "/dashboard/login"
 
 	# id_info
 	token_request = Request()
@@ -189,6 +191,13 @@ def saas_setup(key, app, country, subdomain):
 			"subdomain": subdomain,
 		}
 	).insert(ignore_permissions=True)
+	site_name = signup_ar.get_site_name()
+	identify(
+		site_name,
+		app=app,
+		oauth=True,
+	)
+	capture("completed_oauth_account_request", "fc_saas", site_name)
 	create_or_rename_saas_site(app, signup_ar)
 	frappe.set_user("Administrator")
 	create_marketplace_subscription(signup_ar)

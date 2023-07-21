@@ -32,7 +32,7 @@ class SaasSite(Site):
 					"domain": get_saas_domain(self.app),
 					"bench": get_saas_bench(self.app),
 					"apps": [{"app": app} for app in apps],
-					"team": frappe.get_value("Team", {"user": "Administrator"}, "name"),
+					"team": get_default_team_for_app(self.app) ,#frappe.get_value("Team", {"user": "Administrator"}, "name"),
 					"standby_for": self.app,
 					"hybrid_saas_pool": hybrid_saas_pool,
 					"account_request": ar_name,
@@ -175,6 +175,7 @@ def get_app_subscriptions(apps=None, standby_for=None):
 					"app": app,
 					"while_site_creation": True,
 					"status": "Disabled",
+					"team": "Administrator",
 				}
 			).insert(ignore_permissions=True)
 
