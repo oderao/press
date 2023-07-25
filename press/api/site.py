@@ -194,7 +194,7 @@ def _new(site, server: str = None):
 	if len(frappe.db.get_all("Site", {"team": team.name})) <= 1:
 		from press.utils.telemetry import capture
 
-		capture("created_first_site", "fc_signup", team.user)
+		capture("created_first_site", "fc_signup", team.account_request)
 
 	return {
 		"site": site.name,
@@ -638,7 +638,7 @@ def sites_with_recent_activity(sites, limit=3):
 	return query.run(pluck="site")
 
 
-def get_sites(all_sites, start=0, site_filter=""):
+def get_sites(site_filter=""):
 	from press.press.doctype.team.team import get_child_team_members
 
 	team = get_current_team()
@@ -671,8 +671,7 @@ def get_sites(all_sites, start=0, site_filter=""):
 			ON s.group = rg.name
 			WHERE s.status {status_condition}
 			AND s.team {condition}
-			ORDER BY creation DESC
-			{"" if all_sites else f"LIMIT {start}, 10"}""",
+			ORDER BY creation DESC""",
 		as_dict=True,
 	)
 
@@ -684,13 +683,13 @@ def get_sites(all_sites, start=0, site_filter=""):
 
 
 @frappe.whitelist()
-def all(start=0, site_filter=""):
-	return get_sites(all_sites=False, start=start, site_filter=site_filter)
+def all(site_filter=""):
+	return get_sites(site_filter=site_filter)
 
 
 @frappe.whitelist()
 def recent_sites():
-	sites = get_sites(all_sites=True)
+	sites = get_sites()
 
 	site_names = [site.name for site in sites]
 	recents = sites_with_recent_activity(site_names)
@@ -1535,9 +1534,9 @@ def get_auto_update_info(name):
 
 @frappe.whitelist()
 @protected("Site")
-def update_auto_update_info(name, info=dict()):
+def update_auto_update_info(name, info=None):
 	site_doc = frappe.get_doc("Site", name, for_update=True)
-	site_doc.update(info)
+	site_doc.update(info or {})
 	site_doc.save()
 
 

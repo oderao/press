@@ -643,7 +643,7 @@ def get_publisher_profile_info():
 
 
 @frappe.whitelist()
-def update_publisher_profile(profile_data=dict()):
+def update_publisher_profile(profile_data=None):
 	"""Update if exists, otherwise create"""
 	team = get_current_team()
 
@@ -655,12 +655,12 @@ def update_publisher_profile(profile_data=dict()):
 		profile_doc = frappe.get_doc(
 			"Marketplace Publisher Profile", publisher_profile_name, for_update=True
 		)
-		profile_doc.update(profile_data)
+		profile_doc.update(profile_data or {})
 		profile_doc.save(ignore_permissions=True)
 	else:
 		profile_doc = frappe.get_doc({"doctype": "Marketplace Publisher Profile"})
 		profile_doc.team = team
-		profile_doc.update(profile_data)
+		profile_doc.update(profile_data or {})
 		profile_doc.insert(ignore_permissions=True)
 
 
@@ -1077,14 +1077,14 @@ def subscriptions():
 @protected("App Source")
 @frappe.whitelist()
 def branches(name):
-	from press.api.bench import branches
+	from press.api.github import branches as git_branches
 
 	app_source = frappe.get_doc("App Source", name)
 	installation_id = app_source.github_installation_id
 	repo_owner = app_source.repository_owner
 	repo_name = app_source.repository
 
-	return branches(installation_id, repo_owner, repo_name)
+	return git_branches(installation_id, repo_owner, repo_name)
 
 
 @protected("Marketplace App")
@@ -1141,7 +1141,7 @@ def start_review(name):
 	# TODO: Start security check and auto deploy process here
 	app = frappe.get_doc("Marketplace App", name)
 	app.status = "In Review"
-	app.save()
+	app.save(ignore_permissions=True)
 
 
 @protected("Marketplace App")
@@ -1161,9 +1161,9 @@ def communication(name):
 	return res
 
 
+@protected("Marketplace App")
 @frappe.whitelist()
 def add_reply(name, message):
-	team = get_current_team()
 	doctype = "Marketplace App"
 	app = frappe.get_doc(doctype, name)
 	recipients = ", ".join(list(app.get_assigned_users()) or [])
@@ -1175,7 +1175,7 @@ def add_reply(name, message):
 			"reference_doctype": doctype,
 			"reference_name": name,
 			"subject": f"Marketplace App Review: {name}, New message!",
-			"sender": team,
+			"sender": frappe.session.user,
 			"content": message,
 			"is_notification": True,
 			"recipients": recipients,

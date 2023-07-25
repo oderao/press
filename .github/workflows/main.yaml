@@ -41,6 +41,20 @@ jobs:
       - name: Flake8 Test
         run: |
           flake8 --ignore W191,E501,W503 ${GITHUB_WORKSPACE}/press/press
+
+  semgrep:
+    name: Semgrep Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Run Semgrep rules
+        run: |
+          pip install semgrep==1.32
+          semgrep ci --config ./press-semgrep-rules.yml --config r/python.lang.correctness
+
   tests:
     runs-on: ubuntu-latest
     strategy:
