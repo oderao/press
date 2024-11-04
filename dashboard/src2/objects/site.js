@@ -1,25 +1,25 @@
 import {
 	createListResource,
-	LoadingIndicator,
-	createResource
+	createResource,
+	LoadingIndicator
 } from 'frappe-ui';
 import { defineAsyncComponent, h } from 'vue';
 import { toast } from 'vue-sonner';
 import AddDomainDialog from '../components/AddDomainDialog.vue';
 import GenericDialog from '../components/GenericDialog.vue';
 import ObjectList from '../components/ObjectList.vue';
+import SiteActions from '../components/SiteActions.vue';
 import { getTeam, switchToTeam } from '../data/team';
 import router from '../router';
-import { confirmDialog, icon, renderDialog } from '../utils/components';
-import { bytes, date, planTitle, userCurrency } from '../utils/format';
 import { getRunningJobs } from '../utils/agentJob';
-import SiteActions from '../components/SiteActions.vue';
-import { tagTab } from './common/tags';
-import { getDocResource } from '../utils/resource';
-import { logsTab } from './tabs/site/logs';
-import { trialDays } from '../utils/site';
+import { confirmDialog, icon, renderDialog } from '../utils/components';
 import dayjs from '../utils/dayjs';
-import { jobTab } from './common/jobs';
+import { bytes, date, userCurrency } from '../utils/format';
+import { getDocResource } from '../utils/resource';
+import { trialDays } from '../utils/site';
+import { clusterOptions, getUpsellBanner } from './common';
+import { getAppsTab } from './common/apps';
+import { isMobile } from '../utils/device';
 
 export default {
 	doctype: 'Site',
@@ -59,7 +59,8 @@ export default {
 		sendTransferRequest: 'send_change_team_request',
 		addTag: 'add_resource_tag',
 		removeTag: 'remove_resource_tag',
-		getBackupDownloadLink: 'get_backup_download_link'
+		getBackupDownloadLink: 'get_backup_download_link',
+		fetchDatabaseTableSchemas: 'fetch_database_table_schemas'
 	},
 	list: {
 		route: '/sites',
@@ -96,7 +97,7 @@ export default {
 				},
 				{
 					type: 'link',
-					label: 'Bench',
+					label: 'Bench Group',
 					fieldname: 'group',
 					options: {
 						doctype: 'Release Group'
@@ -106,19 +107,7 @@ export default {
 					type: 'select',
 					label: 'Region',
 					fieldname: 'cluster',
-					options: [
-						'',
-						'Bahrain',
-						'Cape Town',
-						'Frankfurt',
-						'KSA',
-						'London',
-						'Mumbai',
-						'Singapore',
-						'UAE',
-						'Virginia',
-						'Zurich'
-					]
+					options: clusterOptions
 				},
 				{
 					type: 'link',
@@ -143,7 +132,7 @@ export default {
 					return value || row.name;
 				}
 			},
-			{ label: 'Status', fieldname: 'status', type: 'Badge', width: 0.6 },
+			{ label: 'Status', fieldname: 'status', type: 'Badge', width: 0.7 },
 			{
 				label: 'Plan',
 				fieldname: 'plan',
@@ -152,10 +141,10 @@ export default {
 					if (row.trial_end_date) {
 						return trialDays(row.trial_end_date);
 					}
-					let $team = getTeam();
+					const $team = getTeam();
 					if (row.price_usd > 0) {
-						let india = $team.doc.country == 'India';
-						let formattedValue = userCurrency(
+						const india = $team.doc.currency === 'INR';
+						const formattedValue = userCurrency(
 							india ? row.price_inr : row.price_usd,
 							0
 						);
@@ -165,7 +154,7 @@ export default {
 				}
 			},
 			{
-				label: 'Cluster',
+				label: 'Region',
 				fieldname: 'cluster',
 				width: 1,
 				format(value, row) {
@@ -180,7 +169,7 @@ export default {
 				}
 			},
 			{
-				label: 'Bench',
+				label: 'Bench Group',
 				fieldname: 'group',
 				width: '15rem',
 				format(value, row) {
@@ -230,11 +219,15 @@ export default {
 					route: `/servers/${site.doc?.server}`
 				});
 			}
-			if (site.doc.group_team == $team.doc?.name || $team.doc?.is_desk_user) {
+			if (
+				site.doc.group_team == $team.doc?.name ||
+				$team.doc?.is_desk_user ||
+				$team.doc?.is_support_agent
+			) {
 				breadcrumbs.push(
 					{
 						label: site.doc?.group_title,
-						route: `/benches/${site.doc?.group}`
+						route: `/groups/${site.doc?.group}`
 					},
 					siteCrumb
 				);
@@ -257,185 +250,96 @@ export default {
 				}
 			},
 			{
-				label: 'Analytics',
+				label: 'Insights',
 				icon: icon('bar-chart-2'),
-				route: 'analytics',
+				route: 'insights',
 				type: 'Component',
+				redirectTo: 'Site Analytics',
+				childrenRoutes: [
+					'Site Jobs',
+					'Site Job',
+					'Site Logs',
+					'Site Log',
+					'Site Analytics',
+					'Site Performance Reports',
+					'Site Performance Request Logs',
+					'Site Performance Slow Queries',
+					'Site Performance Binary Logs',
+					'Site Performance Process List',
+					'Site Performance Request Log',
+					'Site Performance Deadlock Report'
+				],
+				nestedChildrenRoutes: [
+					{
+						name: 'Site Analytics',
+						path: 'analytics',
+						component: () => import('../components/site/SiteAnalytics.vue')
+					},
+					{
+						name: 'Site Jobs',
+						path: 'jobs',
+						component: () => import('../components/site/SiteJobs.vue')
+					},
+					{
+						name: 'Site Job',
+						path: 'jobs/:id',
+						component: () => import('../pages/JobPage.vue')
+					},
+					{
+						name: 'Site Logs',
+						path: 'logs/:type?',
+						component: () => import('../components/site/SiteLogs.vue')
+					},
+					{
+						name: 'Site Log',
+						path: 'logs/view/:logName',
+						component: () => import('../pages/LogPage.vue')
+					},
+					{
+						name: 'Site Performance Reports',
+						path: 'performance',
+						component: () =>
+							import('../components/site/performance/SitePerformance.vue')
+					},
+					{
+						name: 'Site Performance Slow Queries',
+						path: 'performance/slow-queries',
+						component: () =>
+							import('../components/site/performance/SiteSlowQueries.vue')
+					},
+					{
+						name: 'Site Performance Binary Logs',
+						path: 'performance/binary-logs',
+						component: () =>
+							import('../components/site/performance/SiteBinaryLogs.vue')
+					},
+					{
+						name: 'Site Performance Process List',
+						path: 'performance/process-list',
+						component: () =>
+							import('../components/site/performance/SiteProcessList.vue')
+					},
+					{
+						name: 'Site Performance Request Logs',
+						path: 'performance/request-log',
+						component: () =>
+							import('../components/site/performance/SiteRequestLogs.vue')
+					},
+					{
+						name: 'Site Performance Deadlock Report',
+						path: 'performance/deadlock-report',
+						component: () =>
+							import('../components/site/performance/SiteDeadlockReport.vue')
+					}
+				],
 				component: defineAsyncComponent(() =>
-					import('../../src/views/site/SiteCharts.vue')
+					import('../components/site/SiteInsights.vue')
 				),
 				props: site => {
-					return { siteName: site.doc?.name };
+					return { site: site.doc?.name };
 				}
 			},
-			{
-				label: 'Apps',
-				icon: icon('grid'),
-				route: 'apps',
-				type: 'list',
-				list: {
-					doctype: 'Site App',
-					filters: site => {
-						return { parenttype: 'Site', parent: site.doc?.name };
-					},
-					columns: [
-						{
-							label: 'App',
-							fieldname: 'title',
-							width: 1,
-							suffix(row) {
-								if (!row.is_app_patched) {
-									return;
-								}
-
-								return h(
-									'div',
-									{
-										title: 'App has been patched',
-										class: 'rounded-full bg-gray-100 p-1'
-									},
-									h(icon('alert-circle', 'w-3 h-3'))
-								);
-							}
-						},
-						{
-							label: 'Plan',
-							width: 0.75,
-							class: 'text-gray-600 text-sm',
-							format(_, row) {
-								const planText = planTitle(row.plan_info);
-								if (planText) return `${planText}/mo`;
-								else return 'Free';
-							}
-						},
-						{
-							label: 'Branch',
-							fieldname: 'branch',
-							type: 'Badge',
-							width: 1,
-							link: (value, row) => {
-								return `${row.repository_url}/tree/${value}`;
-							}
-						},
-						{
-							label: 'Commit',
-							fieldname: 'hash',
-							type: 'Badge',
-							width: 1,
-							link: (value, row) => {
-								return `${row.repository_url}/commit/${value}`;
-							},
-							format(value) {
-								return value.slice(0, 7);
-							}
-						},
-						{
-							label: 'Commit Message',
-							fieldname: 'commit_message',
-							width: '34rem'
-						}
-					],
-					banner({ documentResource: site }) {
-						const bannerTitle =
-							'Your site is currently on a shared bench. Upgrade plan to install custom apps, enable server scripts and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
-
-						return upsellBanner(site, bannerTitle);
-					},
-					primaryAction({ listResource: apps, documentResource: site }) {
-						return {
-							label: 'Install App',
-							slots: {
-								prefix: icon('plus')
-							},
-							onClick() {
-								const InstallAppDialog = defineAsyncComponent(() =>
-									import('../components/site/InstallAppDialog.vue')
-								);
-
-								renderDialog(
-									h(InstallAppDialog, {
-										site: site.name,
-										onInstalled() {
-											apps.reload();
-										}
-									})
-								);
-							}
-						};
-					},
-					rowActions({ row, listResource: apps, documentResource: site }) {
-						let $team = getTeam();
-
-						return [
-							{
-								label: 'View in Desk',
-								condition: () => $team.doc?.is_desk_user,
-								onClick() {
-									window.open(`/app/app-source/${row.name}`, '_blank');
-								}
-							},
-							{
-								label: 'Change Plan',
-								condition: () => row.plan_info && row.plans.length > 1,
-								onClick() {
-									let SiteAppPlanChangeDialog = defineAsyncComponent(() =>
-										import('../components/site/SiteAppPlanSelectDialog.vue')
-									);
-									renderDialog(
-										h(SiteAppPlanChangeDialog, {
-											app: row,
-											currentPlan: row.plans.find(
-												plan => plan.name === row.plan_info.name
-											),
-											onPlanChanged() {
-												apps.reload();
-											}
-										})
-									);
-								}
-							},
-							{
-								label: 'Uninstall',
-								condition: () => row.app !== 'frappe',
-								onClick() {
-									confirmDialog({
-										title: `Uninstall App`,
-										message: `Are you sure you want to uninstall the app <b>${row.title}</b> from the site <b>${site.doc?.name}</b>?<br>
-										All doctypes and modules related to this app will be removed.`,
-										onSuccess({ hide }) {
-											if (site.uninstallApp.loading) return;
-											toast.promise(
-												site.uninstallApp.submit({
-													app: row.app
-												}),
-												{
-													loading: 'Scheduling app uninstall...',
-													success: jobId => {
-														hide();
-														router.push({
-															name: 'Site Job',
-															params: {
-																name: site.name,
-																id: jobId
-															}
-														});
-														return 'App uninstall scheduled';
-													},
-													error: e => {
-														return e.messages?.length
-															? e.messages.join('\n')
-															: e.message;
-													}
-												}
-											);
-										}
-									});
-								}
-							}
-						];
-					}
-				}
-			},
+			getAppsTab(true),
 			{
 				label: 'Domains',
 				icon: icon('external-link'),
@@ -674,6 +578,7 @@ export default {
 					},
 					orderBy: 'creation desc',
 					fields: [
+						'job',
 						'status',
 						'database_url',
 						'public_url',
@@ -805,6 +710,20 @@ export default {
 						}
 
 						return [
+							{
+								group: 'Details',
+								items: [
+									{
+										label: 'View Job',
+										onClick() {
+											router.push({
+												name: 'Site Job',
+												params: { name: site.name, id: row.job }
+											});
+										}
+									}
+								]
+							},
 							{
 								group: 'Download',
 								items: [
@@ -953,11 +872,11 @@ export default {
 												loading: 'Scheduling backup...',
 												success: () => {
 													hide();
-													toast.success('Backup scheduled');
 													router.push({
-														name: 'Site Detail Jobs',
+														name: 'Site Jobs',
 														params: { name: site.name }
 													});
+													return 'Backup scheduled successfully.';
 												},
 												error: e => {
 													return e.messages?.length
@@ -973,9 +892,9 @@ export default {
 					},
 					banner({ documentResource: site }) {
 						const bannerTitle =
-							'Your site is currently on a shared bench. Upgrade plan for offsite backups and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
+							'Your site is currently on a shared bench group. Upgrade plan for offsite backups and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
 
-						return upsellBanner(site, bannerTitle);
+						return getUpsellBanner(site, bannerTitle);
 					}
 				}
 			},
@@ -1236,7 +1155,7 @@ export default {
 										loading: 'Updating site...',
 										success: () => {
 											router.push({
-												name: 'Site Detail Jobs',
+												name: 'Site Jobs',
 												params: { name: site.name }
 											});
 
@@ -1372,32 +1291,12 @@ export default {
 					},
 					banner({ documentResource: site }) {
 						const bannerTitle =
-							'Your site is currently on a shared bench. Upgrade to a private bench to configure auto updates and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
+							'Your site is currently on a shared bench group. Upgrade to a private bench group to configure auto updates and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
 
-						return upsellBanner(site, bannerTitle);
+						return getUpsellBanner(site, bannerTitle);
 					}
 				}
 			},
-			jobTab('Site'),
-			{
-				label: 'Performance',
-				icon: icon('zap'),
-				route: 'performance',
-				type: 'Component',
-				condition() {
-					const team = getTeam();
-					return (
-						!!team.doc?.enable_performance_tuning || team.doc?.is_desk_user
-					);
-				},
-				component: defineAsyncComponent(() =>
-					import('../components/site/SitePerformance.vue')
-				),
-				props: site => {
-					return { siteName: site.doc?.name, siteVersion: site.doc?.version };
-				}
-			},
-			logsTab(),
 			{
 				label: 'Activity',
 				icon: icon('activity'),
@@ -1408,8 +1307,16 @@ export default {
 					filters: site => {
 						return { site: site.doc?.name };
 					},
-					fields: ['owner'],
+					fields: ['owner', 'job'],
 					orderBy: 'creation desc',
+					route(row) {
+						if (!row.job) return {};
+
+						return {
+							name: 'Site Job',
+							params: { id: row.job }
+						};
+					},
 					columns: [
 						{
 							label: 'Action',
@@ -1423,7 +1330,7 @@ export default {
 							}
 						},
 						{
-							label: 'Reason',
+							label: 'Description',
 							fieldname: 'reason',
 							class: 'text-gray-600'
 						},
@@ -1434,6 +1341,39 @@ export default {
 							align: 'right'
 						}
 					],
+					filterControls() {
+						return [
+							{
+								type: 'select',
+								label: 'Action',
+								fieldname: 'action',
+								class: !isMobile() ? 'w-52' : '',
+								options: [
+									'',
+									'Activate Site',
+									'Add Domain',
+									'Archive',
+									'Backup',
+									'Create',
+									'Clear Cache',
+									'Deactivate Site',
+									'Disable Database Access',
+									'Drop Offsite Backups',
+									'Enable Database Access',
+									'Install App',
+									'Login as Administrator',
+									'Migrate',
+									'Reinstall',
+									'Restore',
+									'Suspend Site',
+									'Uninstall App',
+									'Unsuspend Site',
+									'Update',
+									'Update Configuration'
+								]
+							}
+						];
+					},
 					primaryAction({ documentResource: site }) {
 						return {
 							label: 'Change Notification Email',
@@ -1489,9 +1429,7 @@ export default {
 						};
 					}
 				}
-			},
-
-			tagTab()
+			}
 		],
 		actions(context) {
 			let { documentResource: site } = context;
@@ -1513,7 +1451,7 @@ export default {
 					},
 					onClick() {
 						router.push({
-							name: 'Site Detail Jobs',
+							name: 'Site Jobs',
 							params: { name: site.name }
 						});
 					}
@@ -1556,8 +1494,9 @@ export default {
 				},
 				{
 					label: 'Impersonate Site Owner',
+					title: 'Impersonate Site Owner', // for label to pop-up on hover
 					slots: {
-						prefix: defineAsyncComponent(() =>
+						icon: defineAsyncComponent(() =>
 							import('~icons/lucide/venetian-mask')
 						)
 					},
@@ -1650,37 +1589,5 @@ export default {
 				}
 			];
 		}
-	},
-	routes: [
-		{
-			name: 'Site Job',
-			path: 'jobs/:id',
-			component: () => import('../pages/JobPage.vue')
-		},
-		{
-			name: 'Site Log',
-			path: 'logs/:logName',
-			component: () => import('../pages/LogPage.vue')
-		}
-	]
-};
-
-function upsellBanner(site, title) {
-	if (!site.doc.current_plan?.private_benches && site.doc.group_public) {
-		return {
-			title: title,
-			dismissable: true,
-			id: site.name,
-			button: {
-				label: 'Upgrade Plan',
-				variant: 'outline',
-				onClick() {
-					let SitePlansDialog = defineAsyncComponent(() =>
-						import('../components/ManageSitePlansDialog.vue')
-					);
-					renderDialog(h(SitePlansDialog, { site: site.name }));
-				}
-			}
-		};
 	}
-}
+};

@@ -97,12 +97,17 @@
 							/>
 							<Switch
 								v-model="allowBenchCreation"
-								label="Allow Bench Creation"
+								label="Allow Bench Group Creation"
 								:disabled="adminAccess"
 							/>
 							<Switch
 								v-model="allowServerCreation"
 								label="Allow Server Creation"
+								:disabled="adminAccess"
+							/>
+							<Switch
+								v-model="allowWebhookConfiguration"
+								label="Allow Webhook Configuration"
 								:disabled="adminAccess"
 							/>
 						</div>
@@ -248,6 +253,19 @@ export default {
 				this.$resources.role.setValue.submit(
 					{
 						allow_server_creation: value
+					},
+					{ onSuccess: this.$session.roles.reload }
+				);
+			}
+		},
+		allowWebhookConfiguration: {
+			get() {
+				return !!this.role?.allow_webhook_configuration;
+			},
+			set(value) {
+				this.$resources.role.setValue.submit(
+					{
+						allow_webhook_configuration: value
 					},
 					{ onSuccess: this.$session.roles.reload }
 				);

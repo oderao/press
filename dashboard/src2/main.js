@@ -15,10 +15,11 @@ import { session } from './data/session.js';
 import './vendor/posthog.js';
 import VueCreditCardValidation from 'vue-credit-card-validation';
 
-let request = options => {
-	let _options = options || {};
+const request = options => {
+	const _options = options || {};
 	_options.headers = options.headers || {};
-	let currentTeam = localStorage.getItem('current_team') || window.default_team;
+	const currentTeam =
+		localStorage.getItem('current_team') || window.default_team;
 	if (currentTeam) {
 		_options.headers['X-Press-Team'] = currentTeam;
 	}
@@ -84,6 +85,8 @@ getInitialData().then(() => {
 					/Failed to fetch/,
 					/Load failed/,
 					/frappe is not defined/,
+					/Cannot read properties of undefined \(reading 'exc_type'\)/,
+					/InvalidStateError: Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing/,
 					/Importing a module script failed./
 				];
 				const ignoreErrorTypes = [
@@ -92,7 +95,8 @@ getInitialData().then(() => {
 					'PermissionError',
 					'SecurityException',
 					'AAAARecordExists',
-					'AuthenticationError'
+					'AuthenticationError',
+					'InsufficientSpaceOnServer'
 				];
 				const error = hint.originalException;
 

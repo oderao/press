@@ -52,7 +52,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Cloud Provider",
-   "options": "\nAWS EC2\nOCI",
+   "options": "\nAWS EC2\nOCI\nHetzner",
    "read_only": 1,
    "reqd": 1
   },
@@ -98,8 +98,7 @@
    "fetch_if_empty": 1,
    "fieldname": "machine_image",
    "fieldtype": "Data",
-   "label": "Machine Image",
-   "set_only_once": 1
+   "label": "Machine Image"
   },
   {
    "fieldname": "machine_type",
@@ -193,14 +192,14 @@
    "fieldtype": "Table",
    "label": "Volumes",
    "options": "Virtual Machine Volume",
-   "read_only": 1
+   "read_only_depends_on": "eval: doc.volumes.length > 0"
   },
   {
    "fieldname": "virtual_machine_image",
    "fieldtype": "Link",
    "label": "Virtual Machine Image",
    "options": "Virtual Machine Image",
-   "set_only_once": 1
+   "read_only_depends_on": "eval: doc.virtual_machine_image"
   },
   {
    "default": "0",
@@ -287,8 +286,8 @@
    "fieldtype": "Select",
    "label": "Platform",
    "options": "x86_64\narm64",
-   "reqd": 1,
-   "set_only_once": 1
+   "read_only_depends_on": "eval: doc.platform",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -317,9 +316,14 @@
    "group": "Snapshots",
    "link_doctype": "Virtual Machine Image",
    "link_fieldname": "virtual_machine"
+  },
+  {
+   "group": "Migration",
+   "link_doctype": "Virtual Machine Migration",
+   "link_fieldname": "virtual_machine"
   }
  ],
- "modified": "2024-09-16 12:05:05.989784",
+ "modified": "2024-10-09 10:54:27.750679",
  "modified_by": "Administrator",
  "module": "Press",
  "name": "Virtual Machine",

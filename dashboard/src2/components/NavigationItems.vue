@@ -8,12 +8,15 @@ import { h } from 'vue';
 import DoorOpen from '~icons/lucide/door-open';
 import PanelTopInactive from '~icons/lucide/panel-top-inactive';
 import Package from '~icons/lucide/package';
+import Boxes from '~icons/lucide/boxes';
 import Server from '~icons/lucide/server';
 import WalletCards from '~icons/lucide/wallet-cards';
 import Settings from '~icons/lucide/settings';
 import App from '~icons/lucide/layout-grid';
+import DatabaseZap from '~icons/lucide/database-zap';
 import Globe from '~icons/lucide/globe';
 import Notification from '~icons/lucide/inbox';
+import Code from '~icons/lucide/code';
 import { unreadNotificationsCount } from '../data/notifications';
 
 export default {
@@ -25,7 +28,9 @@ export default {
 			const routeName = this.$route?.name || '';
 			const onboardingComplete = this.$team.doc.onboarding.complete;
 			const enforce2FA = Boolean(
-				this.$team.doc.enforce_2fa && !this.$team.doc.user_info?.is_2fa_enabled
+				!this.$team.doc.is_desk_user &&
+					this.$team.doc.enforce_2fa &&
+					!this.$team.doc.user_info?.is_2fa_enabled
 			);
 
 			return [
@@ -69,13 +74,21 @@ export default {
 					name: 'Benches',
 					icon: () => h(Package),
 					route: '/benches',
+					isActive: routeName.startsWith('Bench'),
+					condition: this.$team.doc?.is_desk_user,
+					disabled: !onboardingComplete || enforce2FA
+				},
+				{
+					name: 'Bench Groups',
+					icon: () => h(Boxes),
+					route: '/groups',
 					isActive:
 						[
 							'Release Group List',
 							'Release Group Detail',
 							'New Release Group',
-							'Bench New Site',
-							'Bench Deploy'
+							'Release Group New Site',
+							'Deploy Candidate'
 						].includes(routeName) ||
 						routeName.startsWith('Release Group Detail'),
 					disabled: !onboardingComplete || enforce2FA
@@ -100,6 +113,21 @@ export default {
 					disabled: enforce2FA
 				},
 				{
+					name: 'Dev Tools',
+					icon: () => h(Code),
+					route: '/devtools',
+					children: [
+						{
+							name: 'SQL Playground',
+							icon: () => h(DatabaseZap),
+							route: '/sql-playground',
+							isActive: routeName === 'SQL Playground'
+						}
+					],
+					isActive: ['SQL Playground'].includes(routeName),
+					disabled: enforce2FA
+				},
+				{
 					name: 'Billing',
 					icon: () => h(WalletCards),
 					route: '/billing',
@@ -113,10 +141,8 @@ export default {
 					icon: () => h(Globe),
 					route: '/partners',
 					isActive: routeName.startsWith('Partner'),
-					condition:
-						// this.$session.hasPartnerAccess &&
-						Boolean(this.$team.doc.erpnext_partner),
-					disabled: !onboardingComplete || enforce2FA
+					condition: Boolean(this.$team.doc.erpnext_partner),
+					disabled: enforce2FA
 				},
 				{
 					name: 'Settings',
@@ -125,7 +151,7 @@ export default {
 					isActive: routeName.startsWith('Settings'),
 					disabled: enforce2FA
 				}
-			].filter(item => item.condition !== false);
+			].filter(item => item.condition ?? true);
 		}
 	},
 	mounted() {

@@ -111,15 +111,15 @@ export default {
 				h(ServerPlansDialog, {
 					server:
 						serverType === 'Server'
-							? this.$appServer.doc.name
-							: this.$dbServer.doc.name,
+							? this.$appServer.name
+							: this.$dbServer.name,
 					serverType
 				})
 			);
 		},
 		currentUsage(serverType) {
-			if (!this.$appServer.doc) return [];
-			if (!this.$dbServer.doc) return [];
+			if (!this.$appServer?.doc) return [];
+			if (!this.$dbServer?.doc) return [];
 
 			let formatBytes = v => this.$format.bytes(v, 0, 2);
 
@@ -324,8 +324,8 @@ export default {
 											this.$appServer.configureAutoAddStorage.submit(
 												{
 													server: doc.name,
-													min: values.min,
-													max: values.max
+													min: Number(values.min),
+													max: Number(values.max)
 												},
 												{
 													onSuccess: () => {
