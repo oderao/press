@@ -7,17 +7,24 @@
 	>
 		<template #actions>
 			<Button
-				v-if="!$team.doc.partner_email"
+				v-if="!$team.doc?.partner_email"
 				icon-left="edit"
 				@click="showAddPartnerCodeDialog = true"
 			>
 				Add Partner Code
 			</Button>
+			<Button
+				v-else
+				icon-left="trash-2"
+				@click="showRemovePartnerDialog = true"
+			>
+				Unlink Partner
+			</Button>
 		</template>
 		<div class="py-4">
 			<span
 				class="text-base font-medium text-gray-700"
-				v-if="!$team.doc.partner_email"
+				v-if="!$team.doc?.partner_email"
 			>
 				Have a OptiBizPro Partner Referral Code? Click on
 				<strong>Add Partner Code</strong> to link with your Partner team.
@@ -25,7 +32,7 @@
 			<ListItem
 				v-else
 				:title="partner_billing_name"
-				:subtitle="$team.doc.partner_email"
+				:subtitle="$team.doc?.partner_email"
 			/>
 		</div>
 		<Dialog
@@ -57,6 +64,30 @@
 				</div>
 			</template>
 		</Dialog>
+
+		<Dialog
+			v-model="showRemovePartnerDialog"
+			:options="{
+				title: 'Remove Partner',
+				actions: [
+					{
+						label: 'Remove',
+						variant: 'solid',
+						theme: 'red',
+						onClick: () => {
+							$resources.removePartner.submit();
+						}
+					}
+				]
+			}"
+		>
+			<template v-slot:body-content>
+				<p class="text-p-base pb-3">
+					This will remove the Partner associated with your account. Are you
+					sure you want to remove the Partner?
+				</p>
+			</template>
+		</Dialog>
 	</Card>
 </template>
 <script>
@@ -72,6 +103,7 @@ export default {
 	data() {
 		return {
 			showAddPartnerCodeDialog: false,
+			showRemovePartnerDialog: false,
 			code: '',
 			partnerExists: false,
 			partner: '',
@@ -103,7 +135,19 @@ export default {
 				url: 'press.api.partner.get_partner_name',
 				auto: true,
 				params: {
-					partner_email: this.$team.doc.partner_email
+					partner_email: this.$team.doc?.partner_email
+				}
+			};
+		},
+		removePartner() {
+			return {
+				url: 'press.api.partner.remove_partner',
+				onSuccess() {
+					this.showRemovePartnerDialog = false;
+					toast.success('Partner removed successfully');
+				},
+				onError() {
+					throw new DashboardError('Failed to remove Partner');
 				}
 			};
 		}

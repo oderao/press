@@ -26,7 +26,7 @@
 				:siteOnPublicBench="!bench"
 				v-model="apps"
 			/>
-			<div v-if="localisationAppNames.length && apps.length" class="space-y-4">
+			<div v-if="showLocalisationSelector" class="space-y-4">
 				<div class="flex space-x-2">
 					<FormControl
 						label="Install Local Compliance App?"
@@ -150,7 +150,18 @@
 						:selectedCluster="cluster"
 						:selectedApps="apps"
 						:selectedVersion="version"
+						:hideRestrictedPlans="selectedLocalisationCountry"
 					/>
+				</div>
+				<div class="mt-3 text-xs text-gray-700">
+					<p>
+						* <strong>Support</strong> includes only issues and bug fixes
+						related to Frappe apps, functional queries will not be entertained.
+					</p>
+					<p class="mt-1">
+						** If you face any issue while using Frappe Cloud, you can raise
+						support ticket regardless of site plan.
+					</p>
 				</div>
 			</div>
 			<div v-if="selectedVersion && plan && cluster">
@@ -321,6 +332,8 @@ export default {
 				) {
 					this.selectedLocalisationCountry = { value: getCountry() };
 				}
+			} else {
+				this.selectedLocalisationCountry = null;
 			}
 		},
 		async version() {
@@ -428,7 +441,7 @@ export default {
 					},
 					onSuccess: site => {
 						router.push({
-							name: 'Site Detail Jobs',
+							name: 'Site Jobs',
 							params: { name: site.name }
 						});
 					}
@@ -448,7 +461,9 @@ export default {
 							site: {
 								name: this.subdomain,
 								apps: ['frappe', ...this.apps.map(app => app.app)],
-								localisation_country: this.selectedLocalisationCountry?.value,
+								localisation_country: this.showLocalisationSelector
+									? this.selectedLocalisationCountry?.value
+									: null,
 								version: this.selectedVersion.name,
 								group: this.selectedVersion.group.name,
 								cluster: this.cluster,
@@ -555,6 +570,27 @@ export default {
 				app => !this.localisationAppNames.includes(app.app)
 			);
 		},
+		showLocalisationSelector() {
+			if (
+				!this.selectedVersionApps ||
+				!this.localisationAppNames.length ||
+				!this.apps.length
+			)
+				return false;
+
+			const appsThatNeedLocalisation = this.selectedVersionApps.filter(
+				app => app.localisation_apps.length
+			);
+
+			if (
+				appsThatNeedLocalisation.some(app =>
+					this.apps.map(a => a.app).includes(app.app)
+				)
+			)
+				return true;
+
+			return false;
+		},
 		localisationAppNames() {
 			if (!this.selectedVersionApps) return [];
 			const localisationAppDetails = this.selectedVersionApps.flatMap(
@@ -601,7 +637,7 @@ export default {
 			if (this.bench) {
 				let group = getCachedDocumentResource('Release Group', this.bench);
 				return [
-					{ label: 'Benches', route: '/benches' },
+					{ label: 'Bench Groups', route: '/groups' },
 					{
 						label: group ? group.doc.title : this.bench,
 						route: {
@@ -611,7 +647,10 @@ export default {
 					},
 					{
 						label: 'New Site',
-						route: { name: 'Bench New Site', params: { bench: this.bench } }
+						route: {
+							name: 'Release Group New Site',
+							params: { bench: this.bench }
+						}
 					}
 				];
 			}

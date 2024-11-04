@@ -171,12 +171,45 @@
 				</div>
 			</div>
 		</div>
+
 		<SiteDailyUsage :site="site" />
+
+		<!-- Tags -->
+		<div class="col-span-1 flex items-center space-x-2 lg:col-span-2">
+			<Badge
+				v-for="tag in $site.doc.tags"
+				:key="tag.tag"
+				:label="tag.tag_name"
+				size="lg"
+				class="group"
+			>
+				<template #suffix>
+					<button
+						@click="removeTag(tag)"
+						class="ml-1 hidden transition group-hover:block"
+					>
+						<i-lucide-x class="mt-0.5 h-3 w-3" />
+					</button>
+				</template>
+			</Badge>
+			<Badge
+				variant="outline"
+				size="lg"
+				label="Add Tag"
+				class="cursor-pointer"
+				@click="showAddTagDialog"
+			>
+				<template #suffix>
+					<i-lucide-plus class="h-3 w-3" />
+				</template>
+			</Badge>
+		</div>
 	</div>
 </template>
 <script>
-import { h, defineAsyncComponent } from 'vue';
 import { getCachedDocumentResource, Progress, Tooltip } from 'frappe-ui';
+import { h, defineAsyncComponent } from 'vue';
+import { toast } from 'vue-sonner';
 import InfoIcon from '~icons/lucide/info';
 import DismissableBanner from './DismissableBanner.vue';
 import { renderDialog } from '../utils/components';
@@ -216,13 +249,33 @@ export default {
 				.then(url => window.open(url, '_blank'));
 		},
 		loginAsTeam() {
-			if (this.$site.doc.additional_system_user_created) {
+			if (this.$site.doc?.additional_system_user_created) {
 				this.$site.loginAsTeam
 					.submit({ reason: '' })
 					.then(url => window.open(url, '_blank'));
 			} else {
 				this.loginAsAdmin();
 			}
+		},
+		removeTag(tag) {
+			toast.promise(
+				this.$site.removeTag.submit({
+					tag: tag.tag_name
+				}),
+				{
+					loading: 'Removing tag...',
+					success: `Tag ${tag.tag_name} removed`,
+					error: e => {
+						return e.messages.length ? e.messages.join('\n') : e.message;
+					}
+				}
+			);
+		},
+		showAddTagDialog() {
+			const TagsDialog = defineAsyncComponent(() =>
+				import('../dialogs/TagsDialog.vue')
+			);
+			renderDialog(h(TagsDialog, { doctype: 'Site', docname: this.site }));
 		},
 		trialDays
 	},
@@ -231,28 +284,28 @@ export default {
 			return [
 				{
 					label: 'Owned by',
-					value: this.$site.doc.owner_email
+					value: this.$site.doc?.owner_email
 				},
 				{
 					label: 'Created by',
-					value: this.$site.doc.owner
+					value: this.$site.doc?.owner
 				},
 				{
 					label: 'Created on',
-					value: this.$format.date(this.$site.doc.creation)
+					value: this.$format.date(this.$site.doc?.creation)
 				},
 				{
 					label: 'Region',
-					value: this.$site.doc.cluster.title,
+					value: this.$site.doc?.cluster.title,
 					prefix: h('img', {
-						src: this.$site.doc.cluster.image,
-						alt: this.$site.doc.cluster.title,
+						src: this.$site.doc?.cluster.image,
+						alt: this.$site.doc?.cluster.title,
 						class: 'h-4 w-4'
 					})
 				},
 				{
 					label: 'Inbound IP',
-					value: this.$site.doc.inbound_ip,
+					value: this.$site.doc?.inbound_ip,
 					suffix: h(
 						Tooltip,
 						{
@@ -263,7 +316,7 @@ export default {
 				},
 				{
 					label: 'Outbound IP',
-					value: this.$site.doc.outbound_ip,
+					value: this.$site.doc?.outbound_ip,
 					suffix: h(
 						Tooltip,
 						{
@@ -275,7 +328,7 @@ export default {
 			];
 		},
 		currentPlan() {
-			if (!this.$site.doc.current_plan && this.$team?.doc) return null;
+			if (!this.$site?.doc?.current_plan || !this.$team?.doc) return null;
 
 			const currency = this.$team.doc.currency;
 			return {
@@ -292,7 +345,7 @@ export default {
 			};
 		},
 		currentUsage() {
-			return this.$site.doc.current_usage;
+			return this.$site.doc?.current_usage;
 		},
 		$site() {
 			return getCachedDocumentResource('Site', this.site);
