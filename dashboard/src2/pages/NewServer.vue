@@ -381,13 +381,13 @@ export default {
 								name: 'dedicated',
 								title: 'Dedicated Server',
 								description:
-									'A pair of dedicated servers managed and owned by frappe'
+									'A pair of dedicated servers managed and owned by OptiBizPro'
 							},
 							{
 								name: 'hybrid',
 								title: 'Hybrid Server',
 								description:
-									'A pair of dedicated servers managed by frappe and owned/provisioned by you'
+									'A pair of dedicated servers managed by OptiBizPro and owned/provisioned by you'
 							}
 						],
 						regions: data.regions,
